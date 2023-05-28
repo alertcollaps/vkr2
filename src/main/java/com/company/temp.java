@@ -44,7 +44,7 @@ public class temp {
         }
         
 
-        Genetic genetic = new Genetic(text, imageTrueArray, pathResult, image.getType(), width, heigth);
+        Genetic genetic = new Genetic(text, imageTrueArray, image.getType(), width, heigth);
         
         genetic.run();
         System.out.println("minimum: " + genetic.getMinimum());
@@ -60,9 +60,12 @@ public class temp {
         }
 
         byte[] key = Utils.intTobytes(imageIndexes);
-        System.out.println("Key: " + Utils.bytesToHex(key));
+        byte[] keyOut = genetic.getKeyOut();
+        //System.out.println("Key: " + Utils.bytesToHex(key));
         
         openFile.setText("key.txt", Utils.bytesToHex(key).getBytes());
+
+        openFile.setText("keyOut.txt", Utils.bytesToHex(keyOut).getBytes());
         
         
         System.out.println(hideImage(text, imageTrueArray, imageIndexes, image.getType(), width, heigth));
@@ -135,6 +138,8 @@ public class temp {
 
         return changeNumPix;
     }
+
+    
 
     private static boolean checkTable(int bitImage, int bitText){
 
