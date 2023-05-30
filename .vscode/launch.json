@@ -1,0 +1,72 @@
+{
+    // Используйте IntelliSense, чтобы узнать о возможных атрибутах.
+    // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
+    // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "main",
+            "request": "launch",
+            "mainClass": "com.company.Temp.main",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.company.Temp.Main",
+            "projectName": "crypto",
+            "vmArgs": "-Xmx4096m -Xms256m"
+        },
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "com.company.App",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "Gost",
+            "request": "launch",
+            "mainClass": "com.company.Encrypt.Gost",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "KeyGenerators",
+            "request": "launch",
+            "mainClass": "com.company.Encrypt.KeyGenerators",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.company.Main",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "comparer",
+            "request": "launch",
+            "mainClass": "com.company.comparer",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "ratioQuality",
+            "request": "launch",
+            "mainClass": "com.company.ratioQuality",
+            "projectName": "crypto"
+        },
+        {
+            "type": "java",
+            "name": "showImage",
+            "request": "launch",
+            "mainClass": "com.company.showImage",
+            "projectName": "crypto"
+        }
+    ]
+}

@@ -1,7 +1,10 @@
 package com.company;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.Scanner;
 
+import com.company.Encrypt.Gost;
+import com.company.Encrypt.KeyGenerators;
 import com.company.Encrypt.Utils;
 
 public class showImage { //Менять переменные tableFirst и tableSecond
@@ -28,13 +31,81 @@ public class showImage { //Менять переменные tableFirst и table
         }
 
         int[] imageIndexes = null;
-
+        /* 
         byte[] key = openFile.getText("key.txt");
         if (key != null && key.length != 0){
             imageIndexes = Utils.bytesToInt(Utils.hexStringToByteArray(new String(key)));
         }
+        */
+        Scanner in = new Scanner(System.in);
+        System.out.print("Please enter your master password: ");
+        String masterPassword = in.nextLine();
+        
 
-        byte[] res = showImage(imageTrueArray, imageIndexes);
+        System.out.print("Choose mode:\n1. With genetic algorithm\n2. Simple\n3. Exit\n->");
+        String mode = in.nextLine();
+        System.out.println();
+        
+        Genetic genetic = new Genetic(new byte[]{}, imageTrueArray, image.getType(), width, heigth, null);
+        byte[] salt = null;
+        int[] sequence = null;
+        System.out.print("Please enter count of sotes: ");
+        String count = in.nextLine();
+        int cc = Integer.parseInt(count);
+        switch (mode){
+            case "1":
+                
+                byte[] keyGen = Utils.hexStringToByteArray(new String(openFile.getText("keyOut.txt")));
+        
+                sequence = genetic.reSequence(keyGen);
+                salt = genetic.getSeed();
+                break;
+            case "2":
+                salt = genetic.getSeed();
+                
+                sequence = new int[cc];
+                
+                for (int i = 0; i < cc; i++){
+                    sequence[i] = i;
+                }
+                
+                break;
+            case "3":
+                in.close();
+                return;
+            default:
+                System.out.println("Invalid value!");
+        }
+
+        imageIndexes = sequence;
+        in.close();
+        byte[] res = showImage(imageTrueArray, imageIndexes, cc);
+        byte[] keyGost = KeyGenerators.getAEADKey(masterPassword.getBytes(), salt);
+        try {
+            res = Gost.decrypt(keyGost, res);
+        }catch (Exception e){
+            e.printStackTrace();
+            System.out.println("May be Bad password!");
+            System.out.println("Try correct error");
+            res[res.length-1]++;
+            try {
+                res = Gost.decrypt(keyGost, res);
+            } catch (Exception e1){
+                e1.printStackTrace();
+                System.out.println("May be Bad password!");
+                System.out.println("Try correct error");
+                res[res.length-1] -= 2;
+                try {
+                    res = Gost.decrypt(keyGost, res);
+                }catch (Exception e2){
+                    e2.printStackTrace();
+                    System.out.println("Bad password!");
+                    return;
+                }
+                
+            }
+            
+        }
 
         openFile.setText(pathTextResult, res);
         System.out.printf("Изменения записаны в файл %s\n", pathTextResult);
@@ -45,21 +116,20 @@ public class showImage { //Менять переменные tableFirst и table
 
 
     
-    public static byte[] showImage(int[] image, int[] imageIndexes){
+    public static byte[] showImage(int[] image, int[] imageIndexes, int len){
 
         int readBit = 1;
         int indexImage = 0;
 
         int k = 0;
-        int len = image.length * 2;
+        
 
        
-        byte[] result = new byte[len];
+        byte[] result = new byte[len*2];
         readCount = 0;
-        len = image.length;
-        if (imageIndexes != null){
-            len = imageIndexes.length;
-        }
+        //len = image.length;
+        
+        
         for (int i = 0; i < len; i++){
             int imageIndex = imageIndexes != null ? imageIndexes[indexImage] : indexImage;
             int currColor = checkBit(image[imageIndex]);
@@ -68,19 +138,19 @@ public class showImage { //Менять переменные tableFirst и table
             
             if (validateDouble(currColor)){
                 int bit = parseBit(currColor);
-                result[i] = (byte) ((bit >> 1) & 1); // {0000 0011} -> And {0000 0001} & {0000 0001} (1)
-                result[i+1] = (byte) (bit & 1); //And {0000 0011} & {0000 0001} (1) = 0000 0001
-                i++;
+                result[readCount] = (byte) ((bit >> 1) & 1); // {0000 0011} -> And {0000 0001} & {0000 0001} (1)
+                result[readCount+1] = (byte) (bit & 1); //And {0000 0011} & {0000 0001} (1) = 0000 0001
+                //i++;
                 readCount = readCount + 2;
                 continue;
             }
             int bit = parseBit(currColor);
-            result[i] = (byte) bit;
+            result[readCount] = (byte) bit;
             
             readCount++;
         }
         byte tempResult = 0;
-        int lenRes = readCount/8;
+        int lenRes = (readCount+1)/8;
         byte[] res = new byte[lenRes];
         int count = 0;
 

@@ -1,10 +1,18 @@
 package com.company;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Scanner;
 
+import javax.swing.plaf.nimbus.NimbusLookAndFeel;
+
+import org.bouncycastle.crypto.CryptoException;
+
+import com.company.Encrypt.Gost;
+import com.company.Encrypt.KeyGenerators;
 import com.company.Encrypt.Utils;
 
 
@@ -17,8 +25,9 @@ public class temp {
     private static int[] tableSecond = {4, 5, 6};
     private static int twoBitsFirst = 0b00000001; //00
     private static int twoBitsSecond = 0b00000010; //11
+    private static int indexImage = 0;
 
-
+    
     public static void hideManager(String pathImage, String pathText, String pathResult){
         BufferedImage image = openFile.getImage(pathImage);
         byte[] text = openFile.getText(pathText);
@@ -27,7 +36,13 @@ public class temp {
         int width =image.getWidth();
         int heigth = image.getHeight();
         int textSize = text.length;
-
+        Scanner in = new Scanner(System.in);
+        System.out.print("Please enter your master password: ");
+        String masterPassword = in.nextLine();
+        System.out.println();
+       
+        
+        
 
         System.out.printf("Размер сообщения равен: %d бит\n", textSize*8);
 
@@ -42,32 +57,68 @@ public class temp {
                 imageTrueArray[indexTrue + i] = color;
             }
         }
-        
-
-        Genetic genetic = new Genetic(text, imageTrueArray, image.getType(), width, heigth);
-        
-        genetic.run();
-        System.out.println("minimum: " + genetic.getMinimum());
-        int[] imageIndexes = genetic.getOut();
-
-        
-        
-        HashSet<Integer> ss = new HashSet<>();
-        for (int i = 0; i < imageIndexes.length; i++){
-            if (!ss.add(imageIndexes[i])){
-                System.out.println(imageIndexes[i]);
-            }
+        System.out.print("Choose mode:\n1. With genetic algorithm\n2. Simple\n3. Exit\n->");
+        String mode = in.nextLine();
+        System.out.println();
+        Genetic genetic = new Genetic(text, imageTrueArray, image.getType(), width, heigth, null);
+        byte[] salt = null;
+        int[] imageIndexes = null;
+        switch (mode){
+            case "1":
+                
+                salt = KeyGenerators.generateSalt();
+                genetic.setSeed(salt);
+                byte[] AEADkey = KeyGenerators.getAEADKey(masterPassword.getBytes(), salt);
+                try {
+                    text = Gost.encrypt(AEADkey, text);
+                } catch (RuntimeException ex){
+                    ex.printStackTrace();
+                } catch (CryptoException ex) {
+                    ex.printStackTrace();
+                }
+                genetic.run();
+                imageIndexes = genetic.getOut();
+                System.out.println("minimum: " + genetic.getMinimum());
+                byte[] keyOut = genetic.getKeyOut();
+                openFile.setText("keyOut.txt", Utils.bytesToHex(keyOut).getBytes());
+                
+                break;
+            case "2":
+                salt = genetic.getSeed();
+                AEADkey = KeyGenerators.getAEADKey(masterPassword.getBytes(), salt);
+                try {
+                    text = Gost.encrypt(AEADkey, text);
+                } catch (RuntimeException ex){
+                    ex.printStackTrace();
+                } catch (CryptoException ex) {
+                    ex.printStackTrace();
+                }
+                break;
+            case "3":
+                in.close();
+                return;
+            default:
+                System.out.println("Invalid value!");
         }
+        
+        
+        
+       
+        
+         
 
-        byte[] key = Utils.intTobytes(imageIndexes);
-        byte[] keyOut = genetic.getKeyOut();
+        
+        
+    
+
+        //byte[] key = Utils.intTobytes(imageIndexes);
+        
         //System.out.println("Key: " + Utils.bytesToHex(key));
         
-        openFile.setText("key.txt", Utils.bytesToHex(key).getBytes());
+        //openFile.setText("key.txt", Utils.bytesToHex(key).getBytes());
 
-        openFile.setText("keyOut.txt", Utils.bytesToHex(keyOut).getBytes());
         
-        
+        in.close();
         System.out.println(hideImage(text, imageTrueArray, imageIndexes, image.getType(), width, heigth));
 
        
@@ -80,16 +131,25 @@ public class temp {
         img.setRGB(0, 0, width, heigth, imageArray, 0, width);
         openFile.setImage(pathResult, img, "png");
         System.out.printf("Изменения записаны в файл %s\n", pathResult);
+        System.out.printf("Задействовано %d ячеек\n", indexImage);
             
 
 
+    }
+
+    public static void setIndexImage(int indexImage) {
+        temp.indexImage = indexImage;
+    }
+
+    public static int getIndexImage() {
+        return indexImage;
     }
 
     public static int hideImage(byte[] text, int[] image, int[] imageIndexes, int imageType, int w, int h){
 
         int writeBit = 1;
 
-        int indexImage = 0;
+        indexImage = 0;
 
         int k = 0;
         int len = image.length;

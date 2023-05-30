@@ -1,7 +1,9 @@
 package com.company;
 
+
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,6 +13,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeSet;
+import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -25,20 +29,23 @@ public class Genetic {
     private byte[] keyOut;
     private int imageType;
     private byte[] mutKey;
+    private int sotes;
     private int w;
     private int h;
     private int minimum;
     private HashMap<byte[], int[]> idealPopul;
     private HashMap<byte[], int[]> population;
-    private HashMap<Short, String> populationHistory;
+    HashMap<Integer, Integer> lst1 = new HashMap<>();
+    HashMap<Integer, Integer> lst2 = new HashMap<>();
+   
     private int sizePopulation;
-    final int countPopulations = 18;
-    final int countIdealPopulations = 5;
+    final int countPopulations = 36;
+    final int countIdealPopulations = 11;
     private ArrayList<Integer> imageArrayIndexes;
     private double propCrossover = 0.001;
     final double persentageMutation = 1;
     final double persentageMutationSize = 0.2;
-    final int limitErrors = 2;
+    final int limitErrors = 3;
     final int sizeSeed = 14;
     private long seed = 123274692783460312L;
     final int sizeKeyMap = 2;
@@ -49,26 +56,33 @@ public class Genetic {
     }
 
 
-    public Genetic(byte[] data, int[] image, int imageType, int w, int h){
+    public Genetic(byte[] data, int[] image, int imageType, int w, int h, byte[] seedByte){
         this.data = data;
         this.image = new int[image.length];
         System.arraycopy(image, 0, this.image, 0, image.length);
         this.imageType = imageType;
         this.w = w;
         this.h = h;
-        
+       
         sizePopulation = data.length * 8;
         keyOut = new byte[0];
         out = new int[sizePopulation];
-        populationHistory = new HashMap<>();
+        
         imageArrayIndexes = new ArrayList<>();
         for (int i = 0; i < image.length; i++){
             imageArrayIndexes.add(i, i);
         }
 
         minimum = sizePopulation;
-    
+        if (seedByte != null){
+            seed = bytesToLong(seedByte);
+        }
         
+        
+    }
+
+    public byte[] getSeed() {
+        return longToBytes(seed);
     }
 
     public byte[] getMutKey() {
@@ -94,6 +108,9 @@ public class Genetic {
     public void setData(byte[] data) {
         this.data = data;
     }
+    public void setSeed(byte[] seed) {
+        this.seed = bytesToLong(seed);
+    }
 
     public void run(){
         createPopulation();
@@ -106,7 +123,7 @@ public class Genetic {
         
         int count = 0;
         while (count < limitErrors){
-            selection();
+           selection();
             if (min != minimum){
                 min = minimum;
                 System.out.println("New minimum:" + min);
@@ -124,6 +141,7 @@ public class Genetic {
 
             
         }
+        temp.setIndexImage(sotes);
         
     
     }
@@ -140,7 +158,8 @@ public class Genetic {
             if (min < minimum){
                 minimum = min;
                 keyOut = Utils.concatArrays(longToBytes(seed), intTobytes(sizePopulation), keys.get(i));
-                System.out.println(Utils.bytesToHex(keyOut));
+                sotes = temp.getIndexImage();
+                //System.out.println(Utils.bytesToHex(keyOut));
                 System.arraycopy(imageIndexes, 0, out, 0, sizePopulation);
             }
             count.add(i, min); 
@@ -188,8 +207,12 @@ public class Genetic {
             System.arraycopy(population.get(k1), 0, pop1, 0, pop1.length);
             System.arraycopy(population.get(k2), 0, pop2, 0, pop2.length);
 
-            List list1 = Arrays.stream(population.get(k1)).boxed().collect(Collectors.toList());
-            List list2 = Arrays.stream(population.get(k2)).boxed().collect(Collectors.toList());
+            HashMap<Integer, Integer> lst1 = new HashMap<>();
+            HashMap<Integer, Integer> lst2 = new HashMap<>();
+            for (int j = 0; j < pop1.length; j++){
+                lst1.put(pop1[j], j);
+                lst2.put(pop2[j], j);
+            }
 
             Arrays.sort(pop1, 0, sizePopulation);
             Arrays.sort(pop2, 0, sizePopulation);
@@ -213,8 +236,8 @@ public class Genetic {
 
                 
                 
-                ii1[j] = list1.indexOf(pop1[index]);
-                ii2[j] = list2.indexOf(pop2[index1]);
+                ii1[j] = lst1.get(pop1[index]);
+                ii2[j] = lst2.get(pop2[index1]);
               
             }
             int[] temp1 = population.get(k1);
@@ -261,19 +284,22 @@ public class Genetic {
         SecureRandom rnd = new SecureRandom();
         List<byte[]> keys = new ArrayList<>(population.keySet());
         Collections.shuffle(keys, rnd);
+        ArrayList<Integer> ArrayIndex = new ArrayList<>(imageArrayIndexes);
+        HashSet<Integer> arrIND = new HashSet<>(ArrayIndex);
         for (int i = 0; i < keys.size() * persentageMutationSize; i++){
             Random random = new Random(getLongFromByte(keys.get(i), keys.get(i)));
             int[] temp = population.get(keys.get(i));
-            ArrayList<Integer> ArrayIndex = new ArrayList<>(imageArrayIndexes);
+            
             ArrayList<Integer> temp1 = new ArrayList<>(temp.length);
             for (int j : temp){
                 temp1.add(j);
             }
-            HashSet<Integer> ss = new HashSet<>(ArrayIndex);
+            
 
-            ss.removeAll(temp1);
-            Integer[] temp2 = ss.toArray(new Integer[ss.size()]);
-
+            arrIND.removeAll(temp1);
+            Integer[] temp2 = arrIND.toArray(new Integer[arrIND.size()]);
+            arrIND.addAll(temp1);
+            temp1 = null;
 
             
             for (int j = 0; j < (int) (sizePopulation * persentageMutation/100); j++){
@@ -314,7 +340,7 @@ public class Genetic {
         population = new HashMap<byte[], int[]>();
       
         SecureRandom rnd = new SecureRandom();
-        seed = rnd.nextLong();
+        //seed = rnd.nextLong();
         short number = 0;
         
         for (int i = 0; i < countPopulations; i++){
@@ -387,22 +413,26 @@ public class Genetic {
             return pop;
         }
         ArrayList<Integer> ArrayIndex = new ArrayList<>(imageArrayIndexes);
+        HashSet<Integer> arrIND = new HashSet<>(ArrayIndex);
+        
         int[] temp = new int[pop.length];
         System.arraycopy(pop, 0, temp, 0, temp.length);
 
         for (int i = 0; i < count; i++){
             Random random = new Random(getLongFromByte(key, key));
        
-            
             ArrayList<Integer> temp1 = new ArrayList<>(temp.length);
             for (int j : temp){
                 temp1.add(j);
             }
-            HashSet<Integer> ss = new HashSet<>(ArrayIndex);
 
-            ss.removeAll(temp1);
-            Integer[] temp2 = ss.toArray(new Integer[ss.size()]);
-            ss.clear();
+            arrIND.removeAll(temp1);
+            Integer[] temp2 = arrIND.toArray(new Integer[arrIND.size()]);
+            arrIND.addAll(temp1);
+
+            
+            
+            
     
             for (int j = 0; j < (int) (sizePopulation * persentageMutation/100); j++){
                 
@@ -418,8 +448,12 @@ public class Genetic {
                 temp2[indRnd] = tmp;
                 
             }
+            temp2 = null;
+            
             key = Utils.concatArrays(new byte[]{3}, key);
+            
         }
+        
         mutKey = key;
         return temp;
     }
@@ -434,10 +468,16 @@ public class Genetic {
         
         System.arraycopy(popul1, 0, pop1, 0, pop1.length);
         System.arraycopy(popul2, 0, pop2, 0, pop2.length);
-
-        List list1 = Arrays.stream(popul1).boxed().collect(Collectors.toList());
-        List list2 = Arrays.stream(popul2).boxed().collect(Collectors.toList());
-
+        //Long time = System.currentTimeMillis();
+        lst1.clear();
+        lst2.clear();
+        for (int i = 0; i < popul1.length; i++){
+            lst1.put(popul1[i], i);
+            lst2.put(popul2[i], i);
+        }
+        //System.out.println("LST part: " + Long.toString(System.currentTimeMillis() - time));
+        
+        
         Arrays.sort(pop1, 0, sizePopulation);
         Arrays.sort(pop2, 0, sizePopulation);
         HashSet<Integer> ss = new HashSet<>();
@@ -454,13 +494,14 @@ public class Genetic {
                 index = random.nextInt(sizePopulation - 1);
             }
             
+            
             int index1 = random.nextInt(sizePopulation - 1);
             while (Arrays.binarySearch(pop1, 0, sizePopulation, pop2[index1]) >= 0){
                 index1 = random.nextInt(sizePopulation - 1);
             }
 
-            ii1[j] = list1.indexOf(pop1[index]);
-            ii2[j] = list2.indexOf(pop2[index1]);
+            ii1[j] = lst1.get(pop1[index]);
+            ii2[j] = lst2.get(pop2[index1]);
             
         }
         int[] temp1 = popul1;
@@ -494,6 +535,7 @@ public class Genetic {
     }
 
     public int[] reSequence(byte[] key){
+        
         byte[] keyArr = new byte[key.length - 12];
         byte[] keyArr1 = new byte[key.length - 12];
         System.arraycopy(key, 12, keyArr, 0, keyArr.length);
@@ -516,7 +558,9 @@ public class Genetic {
         int[] arrShorts = new int[key.length];
         HashMap<Integer, int[]> position = new HashMap<>();
         HashMap<Integer, byte[]> seedPosition = new HashMap<>();
-        HashMap<byte[], Integer> seedPositionREs = new HashMap<>();
+        HashMap<Integer, Integer> seedPositionREs = new HashMap<>();
+        HashMap<Integer, int[]> seedPositionREsMut = new HashMap<>();
+        
         HashMap<Short, Integer> shortPosition = new HashMap<>();
         for (int i = 0; i < keyArr.length; i++){
             position.put(i, null);
@@ -562,6 +606,7 @@ public class Genetic {
             
             int countCurrentSum = 0;
             int countZero = 0;
+            //long time = System.currentTimeMillis();
             while (currValue != 2){
                 if (currValue == 3){
                     countThree++;
@@ -576,14 +621,28 @@ public class Genetic {
                     continue;
                 }
                 if (position.get(k) == null){
-                    System.out.println("Warning! Pass value!");
+                    //System.out.println("Warning! Pass value!");
                     k++;
                     currValue = keyArr[k];
                     continue;
                 }
                 byte[] kk = seedPosition.get(k);
-                int[] curr = getMutation(position.get(k), seedPosition.get(k), countThree);
-                kk = getMutKey();
+                int[] curr;
+                byte[] arrHash = Utils.concatArrays(seedPosition.get(k), intTobytes(countThree));
+                if (seedPositionREsMut.containsKey(Arrays.hashCode(arrHash))){
+                    curr = seedPositionREsMut.get(Arrays.hashCode(arrHash));
+                    byte[] bt = new byte[countThree];
+                    for (int j = 0; j < countThree; j++){
+                        bt[j] = 3;
+                    }
+                    kk = Utils.concatArrays(bt, seedPosition.get(k));
+                } else {
+                    curr = getMutation(position.get(k), seedPosition.get(k), countThree);
+                    position.put(k, null);
+                    kk = getMutKey();
+                }
+                //Сделать скачек на размер массива kk
+                
                 currentSum.put(kk, curr);
                 while (k < keyArr.length){
                     k++;
@@ -613,11 +672,20 @@ public class Genetic {
                 currValue = keyArr[k];
                 continue;
             }
+            
+            //time = System.currentTimeMillis();
             List<byte[]> lstKeys = new ArrayList<>(currentSum.keySet());
             if (lstKeys.size() != 2){
                 System.out.println("Error!! lstKeys != 2");
             }
-            int[] cross = getCrossover(currentSum.get(lstKeys.get(0)), currentSum.get(lstKeys.get(1)), lstKeys.get(0), lstKeys.get(1), countZero);
+            int[] cross = null;
+            byte[] arrHash = Utils.concatArrays(lstKeys.get(0), lstKeys.get(1), intTobytes(countZero));
+            
+            cross = getCrossover(currentSum.get(lstKeys.get(0)), currentSum.get(lstKeys.get(1)), lstKeys.get(0), lstKeys.get(1), countZero);
+                //seedPositionREs.put(Arrays.hashCode(Utils.concatArrays(lstKeys.get(0), lstKeys.get(1))), arrOnes[i]);
+            
+            //System.out.println("Crossover part: " + Long.toString(System.currentTimeMillis() - time));
+            
             byte[] newKey = ch;
             position.remove(arrOnes[i]);
             seedPosition.remove(arrOnes[i]);
@@ -628,6 +696,7 @@ public class Genetic {
             } else {
                 keyArr[k] = 1;
             }
+            
 
         }
         int currValue = keyArr[0];

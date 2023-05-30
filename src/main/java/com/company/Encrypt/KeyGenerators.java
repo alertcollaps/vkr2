@@ -1,7 +1,7 @@
 package com.company.Encrypt;
 
 public class KeyGenerators{
-    final static int saltLength = 64;
+    final static int saltLength = 8;
     final static byte[] binVectorForHmac = {
         -26, 59, -20, 39, -46, 38, -100, 71, 39, 64, 33, 127, 84, -16, 62, -46, 109, -97, 24, 28, 45, -80, -51, -61, -115, 68, 124, -116, -70, 56, 43, 14
     };

@@ -34,7 +34,7 @@ public class Main {
                 imageTrueArray[indexTrue + i] = color;
             }
         }
-        Genetic genetic = new Genetic(new byte[]{}, imageTrueArray, image.getType(), width, heigth);
+        Genetic genetic = new Genetic(new byte[]{}, imageTrueArray, image.getType(), width, heigth, null);
         byte[] key = Utils.hexStringToByteArray(new String(openFile.getText("keyOut.txt")));
         int[] sequence = genetic.reSequence(key);
         System.out.println();
