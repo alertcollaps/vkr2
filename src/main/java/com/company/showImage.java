@@ -1,6 +1,7 @@
 package com.company;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.nio.ByteBuffer;
 import java.util.Scanner;
 
 import com.company.Encrypt.Gost;
@@ -49,20 +50,23 @@ public class showImage { //Менять переменные tableFirst и table
         Genetic genetic = new Genetic(new byte[]{}, imageTrueArray, image.getType(), width, heigth, null);
         byte[] salt = null;
         int[] sequence = null;
-        System.out.print("Please enter count of sotes: ");
-        String count = in.nextLine();
-        int cc = Integer.parseInt(count);
+        
+        int cc = 0;
         switch (mode){
             case "1":
                 
                 byte[] keyGen = Utils.hexStringToByteArray(new String(openFile.getText("keyOut.txt")));
-        
+                byte[] sotes = new byte[4];
+                System.arraycopy(keyGen, 0, sotes, 0, 4);
+                cc = bytesToInt(sotes);
                 sequence = genetic.reSequence(keyGen);
                 salt = genetic.getSeed();
                 break;
             case "2":
                 salt = genetic.getSeed();
-                
+                System.out.print("Please enter count of sotes: ");
+                String count = in.nextLine();
+                cc = Integer.parseInt(count);
                 sequence = new int[cc];
                 
                 for (int i = 0; i < cc; i++){
@@ -113,7 +117,12 @@ public class showImage { //Менять переменные tableFirst и table
 
         
     }
-
+    public static int bytesToInt(byte[] bytes) {
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
+        buffer.put(bytes);
+        buffer.flip();//need flip 
+        return buffer.getInt();
+    }
 
     
     public static byte[] showImage(int[] image, int[] imageIndexes, int len){

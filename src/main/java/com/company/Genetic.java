@@ -105,6 +105,8 @@ public class Genetic {
         return minimum;
     }
 
+    
+
     public void setData(byte[] data) {
         this.data = data;
     }
@@ -157,14 +159,15 @@ public class Genetic {
             int min = temp.hideImage(data, img, imageIndexes, imageType, w, h); //Вызов оракула
             if (min < minimum){
                 minimum = min;
-                keyOut = Utils.concatArrays(longToBytes(seed), intTobytes(sizePopulation), keys.get(i));
                 sotes = temp.getIndexImage();
-                //System.out.println(Utils.bytesToHex(keyOut));
+                keyOut = Utils.concatArrays(intTobytes(sotes), longToBytes(seed), intTobytes(sizePopulation), keys.get(i));
+                
+                System.out.println(sotes);
                 System.arraycopy(imageIndexes, 0, out, 0, sizePopulation);
             }
             count.add(i, min); 
         }
-
+        
         
         idealPopul = new HashMap<byte[], int[]>();
         int min = Collections.min(count);
@@ -536,17 +539,17 @@ public class Genetic {
 
     public int[] reSequence(byte[] key){
         
-        byte[] keyArr = new byte[key.length - 12];
-        byte[] keyArr1 = new byte[key.length - 12];
-        System.arraycopy(key, 12, keyArr, 0, keyArr.length);
-        System.arraycopy(key, 12, keyArr1, 0, keyArr1.length);
+        byte[] keyArr = new byte[key.length - 16];
+        byte[] keyArr1 = new byte[key.length - 16];
+        System.arraycopy(key, 16, keyArr, 0, keyArr.length);
+        System.arraycopy(key, 16, keyArr1, 0, keyArr1.length);
 
         byte[] sizePopulationBytes = new byte[4];
-        System.arraycopy(key, 8, sizePopulationBytes, 0, 4);
+        System.arraycopy(key, 12, sizePopulationBytes, 0, 4);
         sizePopulation = bytesToInt(sizePopulationBytes);
         
         byte[] seedByte = new byte[8];
-        System.arraycopy(key, 0, seedByte, 0, 8);
+        System.arraycopy(key, 4, seedByte, 0, 8);
 
         seed = bytesToLong(seedByte);
 

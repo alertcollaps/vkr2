@@ -40,7 +40,7 @@ public class temp {
         System.out.print("Please enter your master password: ");
         String masterPassword = in.nextLine();
         System.out.println();
-       
+        
         
         
 
@@ -76,6 +76,7 @@ public class temp {
                 } catch (CryptoException ex) {
                     ex.printStackTrace();
                 }
+                genetic.setData(text);
                 genetic.run();
                 imageIndexes = genetic.getOut();
                 System.out.println("minimum: " + genetic.getMinimum());
@@ -93,6 +94,7 @@ public class temp {
                 } catch (CryptoException ex) {
                     ex.printStackTrace();
                 }
+                
                 break;
             case "3":
                 in.close();
