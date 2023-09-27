@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 
 public class openFile {
@@ -53,6 +54,15 @@ public class openFile {
         }
         catch(IOException ex){
             System.out.println(ex.getMessage());
+        }
+    }
+
+    public static void addToFile(String path, String text){
+        try (FileWriter writer = new FileWriter(path, true)){
+            writer.append(text);
+            writer.flush();
+        } catch (IOException ex){
+            ex.printStackTrace();
         }
     }
 }

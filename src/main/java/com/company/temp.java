@@ -2,6 +2,7 @@ package com.company;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -121,7 +122,8 @@ public class temp {
 
         
         in.close();
-        System.out.println(hideImage(text, imageTrueArray, imageIndexes, image.getType(), width, heigth));
+        resultInserting res = hideImage(text, imageTrueArray, imageIndexes, image.getType(), width, heigth);
+        System.out.println("Изменено бит: " + res.countChanges);
 
        
         for (int i = 0; i < imageArray.length; i++){ //resize
@@ -147,7 +149,8 @@ public class temp {
         return indexImage;
     }
 
-    public static int hideImage(byte[] text, int[] image, int[] imageIndexes, int imageType, int w, int h){
+    public static resultInserting hideImage(byte[] text, int[] image, int[] imageIndexes, int imageType, int w, int h){
+
 
         int writeBit = 1;
 
@@ -159,6 +162,7 @@ public class temp {
 
         byte[] textLine = getTextLine(text);
         int changeNumPix = 0;
+        HashSet<Integer> changeMatrix = new HashSet<Integer>();
 
         for (int i = 0; i < textLine.length - 1; i++){
             //indexImage = indImage; //add
@@ -166,9 +170,7 @@ public class temp {
            
             //
             if (k == 3){
-                
-            
-                return changeNumPix;
+                return new resultInserting(changeNumPix, changeMatrix);
             }
             int imageIndex = imageIndexes != null ? imageIndexes[indexImage] : indexImage;
             int pixel = image[imageIndex];
@@ -180,7 +182,11 @@ public class temp {
 
             if (checkTable(bit, currBit)){
                 int bit1 = generateColor(currBit);
-                if (bit != bit1) changeNumPix++;
+                if (bit != bit1) {
+                    changeMatrix.add(indexImage);
+                    changeNumPix++;
+                }
+
                 setColor(imageIndex, image, bit1);
                 i++;
                 writeBit = writeBit + 2;
@@ -190,7 +196,11 @@ public class temp {
                 continue;
             }
             int bit1 = generateOneBit(bit, textLine[i]);
-            if (bit != bit1) changeNumPix++;
+            if (bit != bit1) {
+                changeMatrix.add(indexImage);
+                changeNumPix++;
+            }
+
             setColor(imageIndex, image, bit1);
             writeBit++;
             if (++indexImage >= len){
@@ -198,7 +208,7 @@ public class temp {
             }
         }
 
-        return changeNumPix;
+        return new resultInserting(changeNumPix, changeMatrix);
     }
 
     
@@ -357,4 +367,5 @@ public class temp {
     }
     
     
+   
 }

@@ -35,17 +35,23 @@ public class Genetic {
     private int minimum;
     private HashMap<byte[], int[]> idealPopul;
     private HashMap<byte[], int[]> population;
+    private HashMap<byte[], HashSet<Integer>> populationChanges;
+    private HashMap<byte[], HashSet<Integer>> idealPopulationChanges;
     HashMap<Integer, Integer> lst1 = new HashMap<>();
     HashMap<Integer, Integer> lst2 = new HashMap<>();
-   
+    StringBuffer str = new StringBuffer();
     private int sizePopulation;
-    final int countPopulations = 36;
-    final int countIdealPopulations = 11;
+    final int countPopulations = 10;
+    final int countCopyies = 10;
+    final int countInvalidPopulations = 2;
     private ArrayList<Integer> imageArrayIndexes;
-    private double propCrossover = 0.001;
-    final double persentageMutation = 1;
-    final double persentageMutationSize = 0.2;
-    final int limitErrors = 3;
+    private double propCrossover = 1;
+    final double persentageMutation = 0.3;
+    final double persentageMutationSize = 0.4;
+    final int maxMutation = 2000;
+    final int minMutation = 200;
+    int mutationSize = 20000;
+    final int limitErrors = 30;
     final int sizeSeed = 14;
     private long seed = 123274692783460312L;
     final int sizeKeyMap = 2;
@@ -63,6 +69,7 @@ public class Genetic {
         this.imageType = imageType;
         this.w = w;
         this.h = h;
+        populationChanges = new HashMap<>();
        
         sizePopulation = data.length * 8;
         keyOut = new byte[0];
@@ -123,20 +130,50 @@ public class Genetic {
     public void start(){
         int min = minimum;
         
+        
         int count = 0;
         while (count < limitErrors){
-           selection();
+            System.out.println("------------------------------------------------------");
+            str.append("------------------------------------------------------\n");
+            selection();
+            List<byte[]> keys = new ArrayList<>(population.keySet());
+            str.append("Liders:\n");
+            for (byte[] k : keys){
+                str.append(Utils.bytesToHex(k));
+                str.append('\n');
+            }
+            
             if (min != minimum){
                 min = minimum;
-                System.out.println("New minimum:" + min);
+                System.out.println("New minimum: " + min);
+                System.out.println("Зайдействовано ячеек: " + sotes);
+
+                str.append("New minimum: " + min + '\n' + "Зайдействовано ячеек: " + sotes + '\n');
+                
+                int leng = keyOut.length;
+                str.append("mutation size: ");
+                if (leng > 8){
+                    long lng = bytesToLong(new byte[]{keyOut[leng-8], keyOut[leng-7], keyOut[leng-6], keyOut[leng-5], keyOut[leng-4], keyOut[leng-3], keyOut[leng-2], keyOut[leng-1]});
+                    Random random = new Random(lng);
+                    int mutationSize = random.nextInt();
+                    mutationSize = mutationSize >= 0 ? (mutationSize % maxMutation) + minMutation : (-mutationSize % maxMutation) + minMutation;
+                    
+                    str.append(mutationSize + '\n');
+                } else {
+                    str.append("Default: " + Utils.bytesToHex(keyOut) + '\n');
+                }
                 count = 0;
             
             } else {
                 count++;
             }
+            str.append("Errors:" + count + '\n');
             System.out.println("Errors:" + count);
+
+            openFile.addToFile("log.log", str.toString());
+            str.setLength(0);
             
-            crossover();
+            //crossover();
             
             mutation();
             
@@ -156,13 +193,17 @@ public class Genetic {
             int[] img = new int[image.length];
             System.arraycopy(image, 0, img, 0, image.length);
 
-            int min = temp.hideImage(data, img, imageIndexes, imageType, w, h); //Вызов оракула
+            resultInserting res = temp.hideImage(data, img, imageIndexes, imageType, w, h); //Вызов оракула
+            populationChanges.put(keys.get(i), res.matrixChanges);
+            int min = res.countChanges;
             if (min < minimum){
+                str.append("MIN:" + Utils.bytesToHex(keys.get(i)) + '\n');
                 minimum = min;
                 sotes = temp.getIndexImage();
+                
                 keyOut = Utils.concatArrays(intTobytes(sotes), longToBytes(seed), intTobytes(sizePopulation), keys.get(i));
                 
-                System.out.println(sotes);
+                //System.out.println(sotes);
                 System.arraycopy(imageIndexes, 0, out, 0, sizePopulation);
             }
             count.add(i, min); 
@@ -170,21 +211,40 @@ public class Genetic {
         
         
         idealPopul = new HashMap<byte[], int[]>();
+        idealPopulationChanges = new HashMap<byte[], HashSet<Integer>>();
         int min = Collections.min(count);
         int max = Collections.max(count) + 1;
         System.out.println("Min: " + min);
         int indexIdeal = count.indexOf(min);
+        ArrayList<Integer> count1 = new ArrayList<>();
+        for (int i = 0; i < count.size(); i++){
+            count1.add(count.get(i));
+        }
 
         
 
-        for (int i = 0; i < countPopulations; i++){
+        for (int i = 0; i < countPopulations - countInvalidPopulations; i++){
             min = Collections.min(count);
             indexIdeal = count.indexOf(min);
             count.set(indexIdeal, max);
             idealPopul.put(keys.get(indexIdeal), population.remove(keys.get(indexIdeal)));
+            idealPopulationChanges.put(keys.get(indexIdeal), populationChanges.remove(keys.get(indexIdeal)));
+            
+        }
+
+        for (int i = 0; i < countInvalidPopulations; i++){
+            max = Collections.max(count1);
+            indexIdeal = count1.indexOf(max);
+            count1.set(indexIdeal, min);
+            idealPopul.put(keys.get(indexIdeal), population.remove(keys.get(indexIdeal)));
+            idealPopulationChanges.put(keys.get(indexIdeal), populationChanges.remove(keys.get(indexIdeal)));
+            
         }
         population.clear();
         population.putAll(idealPopul);
+
+        populationChanges.clear();
+        populationChanges.putAll(idealPopulationChanges);
     }
 
     public void crossover(){
@@ -227,14 +287,21 @@ public class Genetic {
             for (int j = 0; j < (int) (sizePopulation * propCrossover); j += 1){
                 
                 int index = random.nextInt(sizePopulation - 1);
-                
-                while (Arrays.binarySearch(pop2, 0, sizePopulation, pop1[index]) >= 0){
+                int count = 0;
+                while (Arrays.binarySearch(pop2, 0, sizePopulation, pop1[index]) >= 0 && count < 10){
                     index = random.nextInt(sizePopulation - 1);
+                    count++;
                 }
                 
                 int index1 = random.nextInt(sizePopulation - 1);
-                while (Arrays.binarySearch(pop1, 0, sizePopulation, pop2[index1]) >= 0){
+                while (Arrays.binarySearch(pop1, 0, sizePopulation, pop2[index1]) >= 0 && count < 10){
                     index1 = random.nextInt(sizePopulation - 1);
+                    count++;
+                }
+                if (count >= 10){
+                    ii1[j] = -1;
+                    ii2[j] = -1;
+                    continue;
                 }
 
                 
@@ -251,6 +318,9 @@ public class Genetic {
             int[] child2 = new int[temp2.length];
             System.arraycopy(temp2, 0, child2, 0, child2.length);
             for (int j = 0; j < ii1.length; j++){
+                if (ii1[j] == -1){
+                    continue;
+                }
                 int temp = child1[ii1[j]];
                 
                 child1[ii1[j]] = child2[ii2[j]]; //
@@ -286,46 +356,110 @@ public class Genetic {
     public void mutation(){
         SecureRandom rnd = new SecureRandom();
         List<byte[]> keys = new ArrayList<>(population.keySet());
-        Collections.shuffle(keys, rnd);
+        //Collections.shuffle(keys, rnd);
         ArrayList<Integer> ArrayIndex = new ArrayList<>(imageArrayIndexes);
         HashSet<Integer> arrIND = new HashSet<>(ArrayIndex);
-        for (int i = 0; i < keys.size() * persentageMutationSize; i++){
-            Random random = new Random(getLongFromByte(keys.get(i), keys.get(i)));
+        for (int i = 0; i < keys.size(); i++){
+            
+            long lng = rnd.nextLong();
+            Random random = new Random(lng);
             int[] temp = population.get(keys.get(i));
             
             ArrayList<Integer> temp1 = new ArrayList<>(temp.length);
-            for (int j : temp){
-                temp1.add(j);
+            int[] temp11 = new int[temp.length];
+            ArrayList<Integer> arrayChangeNow = new ArrayList<Integer>();
+            
+            
+            
+            
+            for (int cc = 0; cc < countCopyies; cc++){
+                temp1 = new ArrayList<>(temp.length);
+                int iter = 0;
+                for (int j : temp) {
+                    temp1.add(j);
+                    temp11[iter] = j;
+                    iter++;
+                }
+
+                int[] arrayChange = new int[mutationSize];
+                HashSet<Integer> matrixChanges = populationChanges.get(keys.get(i));
+                do {
+
+                    for (int c = 0; c < temp1.size(); c++){
+                        arrayChangeNow.add(c);
+                    }
+                    lng = rnd.nextLong();
+                    random = new Random(lng);
+                    mutationSize = random.nextInt();
+                    mutationSize = mutationSize >= 0 ? (mutationSize % maxMutation) + minMutation : (-mutationSize % maxMutation) + minMutation;
+                    arrayChange = new int[mutationSize];
+
+                    Collections.shuffle(arrayChangeNow, random);
+                
+                    
+                    for (int c = 0; c < mutationSize; c++){
+                        arrayChange[c] = arrayChangeNow.get(c);
+                    }
+                    arrayChangeNow.clear();
+
+                    
+                } while (!compareMutation(matrixChanges, arrayChange));
+                //Если temp2 меньше по размеру temp1?
+                
+                //System.out.println("Find matrix!");
+
+                arrIND.removeAll(temp1);
+                Integer[] temp2 = arrIND.toArray(new Integer[arrIND.size()]);
+                arrIND.addAll(temp1);
+                temp1.clear();;
+
+                
+                
+
+                
+                for (int j = 0; j < mutationSize; j++){
+                    
+                    int indRnd1 = arrayChange[j];
+
+                    int indRnd = random.nextInt(temp2.length);
+                    
+
+                    int tmp = temp11[indRnd1];
+                    
+                    temp11[indRnd1] = temp2[indRnd];
+                    
+                    temp2[indRnd] = tmp;
+                    
+                }
+
+                //population.remove(keys.get(i)); //Analysis
+                
+                byte[] mt = Utils.concatArrays(keys.get(i), new byte[]{3}, longToBytes(lng));
+                population.put(mt, temp11);
+                
             }
             
-
-            arrIND.removeAll(temp1);
-            Integer[] temp2 = arrIND.toArray(new Integer[arrIND.size()]);
-            arrIND.addAll(temp1);
-            temp1 = null;
-
-            
-            for (int j = 0; j < (int) (sizePopulation * persentageMutation/100); j++){
-                
-                int indRnd1 = random.nextInt(temp.length);
-
-                int indRnd = random.nextInt(temp2.length);
-                
-
-                int tmp = temp[indRnd1];
-                
-                temp[indRnd1] = temp2[indRnd];
-                
-                temp2[indRnd] = tmp;
-                
-            }
-
-            population.remove(keys.get(i));
-            byte[] mt = Utils.concatArrays(new byte[]{3} ,keys.get(i));
-            population.put(mt, temp);
         }
 
         
+    }
+
+    public boolean compareMutation(HashSet<Integer> mut1, int[] mut2){
+        
+
+        int res = 0;
+        
+        for (int val : mut2){
+            if (mut1.contains(val)){
+                res++;
+                continue;
+            }
+            res--;
+        }
+        
+        //System.out.println(res);
+        return res > 0.05*mutationSize;
+    
     }
 
     public byte[] intTobytes(int a){
@@ -346,7 +480,7 @@ public class Genetic {
         //seed = rnd.nextLong();
         short number = 0;
         
-        for (int i = 0; i < countPopulations; i++){
+        for (int i = 0; i < countPopulations*2; i++){
             number = (short) rnd.nextInt();
             byte[] num = new byte[2];
             num[0] = (byte)((number >> 8) & 0b11111111);
@@ -491,16 +625,22 @@ public class Genetic {
         for (int j = 0; j < (int) (sizePopulation * propCrossover); j += 1){
             
             int index = random.nextInt(sizePopulation - 1);
-            
-            while (Arrays.binarySearch(pop2, 0, sizePopulation, pop1[index]) >= 0){
+            int count = 0;
+            while (Arrays.binarySearch(pop2, 0, sizePopulation, pop1[index]) >= 0 && count < 10){
                 
                 index = random.nextInt(sizePopulation - 1);
+                count++;
             }
             
-            
             int index1 = random.nextInt(sizePopulation - 1);
-            while (Arrays.binarySearch(pop1, 0, sizePopulation, pop2[index1]) >= 0){
+            while (Arrays.binarySearch(pop1, 0, sizePopulation, pop2[index1]) >= 0 && count < 10){
                 index1 = random.nextInt(sizePopulation - 1);
+                count++;
+            }
+            if (count >= 10){
+                ii1[j] = -1;
+                ii2[j] = -1;
+                continue;
             }
 
             ii1[j] = lst1.get(pop1[index]);
@@ -515,6 +655,9 @@ public class Genetic {
         int[] child2 = new int[temp2.length];
         System.arraycopy(temp2, 0, child2, 0, child2.length);
         for (int j = 0; j < ii1.length; j++){
+            if (ii1[j] == -1){
+                continue;
+            }
             int temp = child1[ii1[j]];
             
             child1[ii1[j]] = child2[ii2[j]]; //
