@@ -368,7 +368,7 @@ public class Genetic {
             ArrayList<Integer> temp1 = new ArrayList<>(temp.length);
             int[] temp11 = new int[temp.length];
             ArrayList<Integer> arrayChangeNow = new ArrayList<Integer>();
-            
+
             
             
             
