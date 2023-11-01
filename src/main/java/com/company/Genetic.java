@@ -1,6 +1,7 @@
 package com.company;
 
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.sql.Time;
@@ -51,7 +52,7 @@ public class Genetic {
     final int maxMutation = 2000;
     final int minMutation = 200;
     int mutationSize = 20000;
-    final int limitErrors = 30;
+    final int limitErrors = 3;
     final int sizeSeed = 14;
     private long seed = 123274692783460312L;
     final int sizeKeyMap = 2;
@@ -132,10 +133,13 @@ public class Genetic {
         
         
         int count = 0;
+        selection();
         while (count < limitErrors){
             System.out.println("------------------------------------------------------");
             str.append("------------------------------------------------------\n");
+            mutation();
             selection();
+            
             List<byte[]> keys = new ArrayList<>(population.keySet());
             str.append("Liders:\n");
             for (byte[] k : keys){
@@ -175,7 +179,7 @@ public class Genetic {
             
             //crossover();
             
-            mutation();
+            
             
 
             
@@ -223,7 +227,7 @@ public class Genetic {
 
         
 
-        for (int i = 0; i < countPopulations - countInvalidPopulations; i++){
+        for (int i = 0; i < countPopulations/*  - countInvalidPopulations*/; i++){
             min = Collections.min(count);
             indexIdeal = count.indexOf(min);
             count.set(indexIdeal, max);
@@ -231,7 +235,7 @@ public class Genetic {
             idealPopulationChanges.put(keys.get(indexIdeal), populationChanges.remove(keys.get(indexIdeal)));
             
         }
-
+        /* 
         for (int i = 0; i < countInvalidPopulations; i++){
             max = Collections.max(count1);
             indexIdeal = count1.indexOf(max);
@@ -240,6 +244,7 @@ public class Genetic {
             idealPopulationChanges.put(keys.get(indexIdeal), populationChanges.remove(keys.get(indexIdeal)));
             
         }
+        */
         population.clear();
         population.putAll(idealPopul);
 
@@ -373,6 +378,7 @@ public class Genetic {
             
             
             for (int cc = 0; cc < countCopyies; cc++){
+                temp11 = new int[temp.length];
                 temp1 = new ArrayList<>(temp.length);
                 int iter = 0;
                 for (int j : temp) {
@@ -404,12 +410,14 @@ public class Genetic {
 
                     
                 } while (!compareMutation(matrixChanges, arrayChange));
+                str.append("mutation size: " + mutationSize + "\n");
                 //Если temp2 меньше по размеру temp1?
                 
                 //System.out.println("Find matrix!");
 
                 arrIND.removeAll(temp1);
                 Integer[] temp2 = arrIND.toArray(new Integer[arrIND.size()]);
+                Arrays.sort(temp2);
                 arrIND.addAll(temp1);
                 temp1.clear();;
 
@@ -435,6 +443,8 @@ public class Genetic {
                 //population.remove(keys.get(i)); //Analysis
                 
                 byte[] mt = Utils.concatArrays(keys.get(i), new byte[]{3}, longToBytes(lng));
+                
+                
                 population.put(mt, temp11);
                 
             }
@@ -480,6 +490,7 @@ public class Genetic {
         //seed = rnd.nextLong();
         short number = 0;
         
+        str.append("seed: " + seed + "\n");
         for (int i = 0; i < countPopulations*2; i++){
             number = (short) rnd.nextInt();
             byte[] num = new byte[2];
@@ -490,6 +501,7 @@ public class Genetic {
                 num[0] = (byte)((number >> 8) & 0b11111111);
                 num[1] = (byte)(number & 0b11111111);
             }
+            str.append("number: " + number + "\n");
             Random random = new Random(seed ^ number);
 
             ArrayList<Integer> ArrayIndex = new ArrayList<>(imageArrayIndexes);
@@ -544,55 +556,78 @@ public class Genetic {
             return temp;
     }
 
-    public int[] getMutation(int[] pop, byte[] key, int count){
-        if (count == 0){
-            mutKey = key;
-            return pop;
-        }
+    public int[] getMutation(int[] pop, long key){
+        
         ArrayList<Integer> ArrayIndex = new ArrayList<>(imageArrayIndexes);
         HashSet<Integer> arrIND = new HashSet<>(ArrayIndex);
         
         int[] temp = new int[pop.length];
         System.arraycopy(pop, 0, temp, 0, temp.length);
 
-        for (int i = 0; i < count; i++){
-            Random random = new Random(getLongFromByte(key, key));
+        long lng = key;
+        int[] temp11 = new int[temp.length];
+        
+        Random random = new Random(lng);
+        mutationSize = random.nextInt();
+        mutationSize = mutationSize >= 0 ? (mutationSize % maxMutation) + minMutation : (-mutationSize % maxMutation) + minMutation;
+        
+
+        
+            
        
             ArrayList<Integer> temp1 = new ArrayList<>(temp.length);
+            ArrayList<Integer> arrayChangeNow = new ArrayList<>(temp.length);
+            int iter = 0;
+            for (int c = 0; c < temp.length; c++){
+                arrayChangeNow.add(c);
+            }
             for (int j : temp){
                 temp1.add(j);
+                temp11[iter] = j; 
+                //arrayChangeNow.add(iter);
+                iter++;
             }
+            int[] arrayChange = new int[mutationSize];
+
+            Collections.shuffle(arrayChangeNow, random);
+        
+            
+            for (int c = 0; c < mutationSize; c++){
+                arrayChange[c] = arrayChangeNow.get(c);
+            }
+            arrayChangeNow.clear();
+
+            
 
             arrIND.removeAll(temp1);
             Integer[] temp2 = arrIND.toArray(new Integer[arrIND.size()]);
+            Arrays.sort(temp2);
             arrIND.addAll(temp1);
+            temp1.clear();;
 
             
             
+
             
-    
-            for (int j = 0; j < (int) (sizePopulation * persentageMutation/100); j++){
+            for (int j = 0; j < mutationSize; j++){
                 
-                int indRnd1 = random.nextInt(temp.length);
+                int indRnd1 = arrayChange[j];
 
                 int indRnd = random.nextInt(temp2.length);
                 
 
-                int tmp = temp[indRnd1];
+                int tmp = temp11[indRnd1];
                 
-                temp[indRnd1] = temp2[indRnd];
+                temp11[indRnd1] = temp2[indRnd];
                 
                 temp2[indRnd] = tmp;
                 
             }
-            temp2 = null;
             
-            key = Utils.concatArrays(new byte[]{3}, key);
-            
-        }
         
-        mutKey = key;
-        return temp;
+        
+        
+        return temp11;
     }
 
     public int[] getCrossover(int[] popul1, int[] popul2, byte[] key1, byte[] key2, int countZero){
@@ -683,9 +718,9 @@ public class Genetic {
     public int[] reSequence(byte[] key){
         
         byte[] keyArr = new byte[key.length - 16];
-        byte[] keyArr1 = new byte[key.length - 16];
+
         System.arraycopy(key, 16, keyArr, 0, keyArr.length);
-        System.arraycopy(key, 16, keyArr1, 0, keyArr1.length);
+
 
         byte[] sizePopulationBytes = new byte[4];
         System.arraycopy(key, 12, sizePopulationBytes, 0, 4);
@@ -693,173 +728,24 @@ public class Genetic {
         
         byte[] seedByte = new byte[8];
         System.arraycopy(key, 4, seedByte, 0, 8);
-
+        
         seed = bytesToLong(seedByte);
 
-        int countOnes = 0;
-        int[] arrOnes = new int[key.length];
-
-
-        int countShorts = 0;
-        int[] arrShorts = new int[key.length];
-        HashMap<Integer, int[]> position = new HashMap<>();
-        HashMap<Integer, byte[]> seedPosition = new HashMap<>();
-        HashMap<Integer, Integer> seedPositionREs = new HashMap<>();
-        HashMap<Integer, int[]> seedPositionREsMut = new HashMap<>();
-        
-        HashMap<Short, Integer> shortPosition = new HashMap<>();
-        for (int i = 0; i < keyArr.length; i++){
-            position.put(i, null);
-            seedPosition.put(i, null);
-            if (keyArr[i] == 1){
-                arrOnes[countOnes] = i;
-                countOnes++;
-            } else if (keyArr[i] != 0 && keyArr[i] != 2 && keyArr[i] != 3){
-                position.remove(i);
-                seedPosition.remove(i);
-                byte[] shrt = new byte[]{keyArr[i], keyArr[i+1]};
-                short numb = (short)(((shrt[0]&0b11111111) << 8) | (shrt[1]&0b11111111));
-                int[] pop = null;
-                if (shortPosition.containsKey(numb)){
-                    int y = shortPosition.get(numb);
-                    pop = position.get(y);
-                } else {
-                    pop = getPopulation(seed, numb);
-                    shortPosition.put(numb, i);
-                }
-                
-                
-                position.put(i, pop);
-                seedPosition.put(i, shrt);
-                
-                keyArr[i+1] = 1;
-                keyArr[i] = 1;
-                position.put(i+1, null);
-                seedPosition.put(i+1, null);
-                i++;
-            }       
-            
-            
+        short number = (short)(((keyArr[0]&0b11111111) << 8) | ((keyArr[1])&0b11111111));
+        int[] population = getPopulation(seed, number);
+        for (int i = 2; i < keyArr.length; i++){
+            if (keyArr[i] == 3){
+                byte[] bLong = new byte[8];
+                System.arraycopy(keyArr, i + 1, bLong, 0, bLong.length);
+                long lng = bytesToLong(bLong);
+                population = getMutation(population, lng);
+                i += 8;
+            }
         }      
 
-        for (int i = countOnes - 1; i >= 0; i--){
-            int k = arrOnes[i];
-            
-            int currValue = keyArr[k];
-           
-            int countThree = 0;
-            LinkedHashMap<byte[], int[]> currentSum = new LinkedHashMap<>();
-            
-            int countCurrentSum = 0;
-            int countZero = 0;
-            //long time = System.currentTimeMillis();
-            while (currValue != 2){
-                if (currValue == 3){
-                    countThree++;
-                    k++;
-                    currValue = keyArr[k];
-                    continue;
-                }
-                if (currValue == 0){
-                    k++;
-                    currValue = keyArr[k];
-                    System.out.println("Error! Zero!!");
-                    continue;
-                }
-                if (position.get(k) == null){
-                    //System.out.println("Warning! Pass value!");
-                    k++;
-                    currValue = keyArr[k];
-                    continue;
-                }
-                byte[] kk = seedPosition.get(k);
-                int[] curr;
-                byte[] arrHash = Utils.concatArrays(seedPosition.get(k), intTobytes(countThree));
-                if (seedPositionREsMut.containsKey(Arrays.hashCode(arrHash))){
-                    curr = seedPositionREsMut.get(Arrays.hashCode(arrHash));
-                    byte[] bt = new byte[countThree];
-                    for (int j = 0; j < countThree; j++){
-                        bt[j] = 3;
-                    }
-                    kk = Utils.concatArrays(bt, seedPosition.get(k));
-                } else {
-                    curr = getMutation(position.get(k), seedPosition.get(k), countThree);
-                    position.put(k, null);
-                    kk = getMutKey();
-                }
-                //Сделать скачек на размер массива kk
-                
-                currentSum.put(kk, curr);
-                while (k < keyArr.length){
-                    k++;
-                    currValue = keyArr[k];
-                    if (currValue == 2){
-                        k--;
-                        break;
-                    }
-                    if (currValue == 0){
-                        if (keyArr[k+1] == 0){
-                            countZero = 2;
-                            keyArr[k+1] = 1;
-                            keyArr[k] = 1;
-                            k++;
-                        } else{
-                            keyArr[k] = 1;
-                            countZero = 1;
-                        }
-                        
-                        break;
-                    }
-                    
-                }
-                countThree = 0;
-                countCurrentSum++;
-                k++;
-                currValue = keyArr[k];
-                continue;
-            }
-            
-            //time = System.currentTimeMillis();
-            List<byte[]> lstKeys = new ArrayList<>(currentSum.keySet());
-            if (lstKeys.size() != 2){
-                System.out.println("Error!! lstKeys != 2");
-            }
-            int[] cross = null;
-            byte[] arrHash = Utils.concatArrays(lstKeys.get(0), lstKeys.get(1), intTobytes(countZero));
-            
-            cross = getCrossover(currentSum.get(lstKeys.get(0)), currentSum.get(lstKeys.get(1)), lstKeys.get(0), lstKeys.get(1), countZero);
-                //seedPositionREs.put(Arrays.hashCode(Utils.concatArrays(lstKeys.get(0), lstKeys.get(1))), arrOnes[i]);
-            
-            //System.out.println("Crossover part: " + Long.toString(System.currentTimeMillis() - time));
-            
-            byte[] newKey = ch;
-            position.remove(arrOnes[i]);
-            seedPosition.remove(arrOnes[i]);
-            position.put(arrOnes[i], cross);
-            seedPosition.put(arrOnes[i], newKey);
-            if (keyArr[k] != 2){
-                System.out.println("Error. k error != 2");
-            } else {
-                keyArr[k] = 1;
-            }
-            
-
-        }
-        int currValue = keyArr[0];
-        int countThree = 0;
-        while (currValue == 3){
-            countThree++;
-            currValue = keyArr[countThree]; 
-        }
-        byte[] kk = seedPosition.get(countThree);
-        int[] out = getMutation(position.get(countThree), kk, countThree);
-        kk = getMutKey();
-        byte[] r = kk;
-        for (byte y : r){
-            System.out.print(y + " ");
-        }
+       
         System.out.println();
-        return out;
+        return population;
     }
 
 }

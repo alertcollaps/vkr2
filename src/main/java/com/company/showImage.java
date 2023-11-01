@@ -2,18 +2,20 @@ package com.company;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import com.company.Encrypt.Gost;
 import com.company.Encrypt.KeyGenerators;
 import com.company.Encrypt.Utils;
 
+
 public class showImage { //Менять переменные tableFirst и tableSecond
     private static int readCount;
     private static int twoBitsFirst = 0b00000001; //0
     private static int twoBitsSecond = 0b00000010; //3
 
-
+    
     public static void main(String[] args) {
         showManager("result.png", "result.txt");
     }
@@ -60,6 +62,7 @@ public class showImage { //Менять переменные tableFirst и table
                 System.arraycopy(keyGen, 0, sotes, 0, 4);
                 cc = bytesToInt(sotes);
                 sequence = genetic.reSequence(keyGen);
+                System.out.println("Hashcode check: " + Arrays.hashCode(sequence));
                 salt = genetic.getSeed();
                 break;
             case "2":

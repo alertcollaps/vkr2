@@ -11,6 +11,7 @@ import java.util.Scanner;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 import org.bouncycastle.crypto.CryptoException;
+import org.bouncycastle.util.Arrays;
 
 import com.company.Encrypt.Gost;
 import com.company.Encrypt.KeyGenerators;
@@ -64,6 +65,7 @@ public class temp {
         Genetic genetic = new Genetic(text, imageTrueArray, image.getType(), width, heigth, null);
         byte[] salt = null;
         int[] imageIndexes = null;
+        
         switch (mode){
             case "1":
                 
@@ -82,7 +84,13 @@ public class temp {
                 imageIndexes = genetic.getOut();
                 System.out.println("minimum: " + genetic.getMinimum());
                 byte[] keyOut = genetic.getKeyOut();
+                System.out.println("Hashcode check: " + Arrays.hashCode(genetic.reSequence(keyOut)));
+                
                 openFile.setText("keyOut.txt", Utils.bytesToHex(keyOut).getBytes());
+                byte[] keyGen = Utils.hexStringToByteArray(new String(openFile.getText("keyOut.txt")));
+                System.out.println("Hashcode checkv2: " + Arrays.hashCode(genetic.reSequence(keyGen)));
+                Genetic genetic1 = new Genetic(new byte[]{}, imageTrueArray, image.getType(), width, heigth, null);
+                System.out.println("Hashcode checkv3: " + Arrays.hashCode(genetic1.reSequence(keyOut)));
                 
                 break;
             case "2":
@@ -136,7 +144,15 @@ public class temp {
         openFile.setImage(pathResult, img, "png");
         System.out.printf("Изменения записаны в файл %s\n", pathResult);
         System.out.printf("Задействовано %d ячеек\n", indexImage);
-            
+        System.out.println("Hashcode: " + Arrays.hashCode(imageIndexes));
+        
+        System.out.println("Start bits index: " + imageIndexes[0] + ", " + imageIndexes[1] + ", " + imageIndexes[2] + ", " + imageIndexes[3]);
+        System.out.println("Last bits index: " + imageIndexes[imageIndexes.length - 4] + ", " + imageIndexes[imageIndexes.length - 3] + ", " + imageIndexes[imageIndexes.length - 2] + ", " + imageIndexes[imageIndexes.length - 1]); 
+        System.out.println("text length: " + text.length);   
+
+        System.out.println("Start bits: " + text[0] + ", " + text[1] + ", " + text[2] + ", " + text[3]);    
+
+        System.out.println("Last bits: " + text[text.length - 4] + ", " + text[text.length - 3] + ", " + text[text.length - 2] + ", " + text[text.length - 1]);    
 
 
     }
